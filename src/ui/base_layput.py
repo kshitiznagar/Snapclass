@@ -27,6 +27,9 @@ def style_background_dashboard():
                 height:100vh !important;
                 overflow:hidden !important;
             }
+            [data-testid="stMain"] {
+                overflow: hidden;
+            }
         </style>
         """, unsafe_allow_html=True
     )
@@ -87,6 +90,9 @@ def style_base_layout():
             }
             button:hover{
                 transform : scale(1.05)
+            }
+            [data-testid="stMain"] {
+                overflow: hidden;
             }
         </style>
         """, unsafe_allow_html=True
