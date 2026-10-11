@@ -5,7 +5,7 @@ pandas
 scikit-learn
 dlib-bin # but it not compiled for python so instead of dlib we use dlib bin
 git+https://github.com/ageitgey/face_recognition_models #github repo for face embeddigs 
-setuptools<70.0.0 #becoz above package is not python package so we have to install setuptool
+setuptools #becoz above package is not python package so we have to install setuptool
 
 #database
 supabase
