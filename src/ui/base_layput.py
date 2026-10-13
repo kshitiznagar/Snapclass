@@ -12,6 +12,27 @@ def style_background_home():
                 padding:2.5rem !important;
                 border-radius:5rem !important;
             }
+            .material-symbols-rounded {
+                font-size: 0 !important;
+            }
+
+            .material-symbols-rounded::before {
+                font-size: 1.2rem;
+            }
+            .material-symbols-outlined {
+                font-family: 'Material Symbols Outlined';
+                font-weight: normal;
+                font-style: normal;
+                font-size: 18px;
+                line-height: 1;
+                letter-spacing: normal;
+                text-transform: none;
+                display: inline-block;
+                white-space: nowrap;
+                direction: ltr;
+                -webkit-font-feature-settings: 'liga';
+                -webkit-font-smoothing: antialiased;
+}
         </style>
         """, unsafe_allow_html=True
     )

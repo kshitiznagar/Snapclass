@@ -25,9 +25,9 @@ def get_face_embeddings(image_np):
     encodings = []
     for face in faces:
         shape = sp(image_np, face)
-        face_discriptor = facerec.compute_face_discriptor(image_np, shape, 2)
+        face_descriptor = facerec.compute_face_descriptor(image_np, shape, 2)
         
-        encodings.append(np.array(face_discriptor))
+        encodings.append(np.array(face_descriptor))
     return encodings
 
 @st.cache_resource
