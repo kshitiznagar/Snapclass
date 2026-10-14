@@ -2,7 +2,7 @@ import streamlit as st
 from src.components.header import header_dashboard
 from src.ui.base_layput import style_background_dashboard, style_base_layout
 from src.components.footer import footer_dashboard
-from src.database.db import check_teacher_exists, create_teacher, teacher_login, get_teacher_subjects
+from src.database.db import check_teacher_exists, create_teacher, teacher_login, get_teacher_subjects, get_attendance_for_teacher
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.subject_card import subject_card
 from src.components.dialogue_share_subject import share_subject_dialog
@@ -13,6 +13,9 @@ from src.database.config import supabase
 from datetime import datetime
 import pandas as pd
 from src.components.dialog_attendance_results import attendance_result_dialog
+from src.components.dialog_voice_attendance import voice_attendance_dialog
+
+
 
 def teacher_screen():
     style_background_dashboard()
@@ -102,61 +105,62 @@ def teacher_tab_take_attendance():
         for idx, img in enumerate(st.session_state.attendance_images):
             with gallery_cols[idx % 4]:
                 st.image(img, width="stretch", caption=f"Photo {idx+1}")
-        
-        c1, c2, c3 = st.columns(3)
-        
-        with c1:
-            if st.button('Clear all photos', width="stretch", type="tertiary", icon=":material/delete:"):
-                st.session_state.attendance_images = []
-                st.rerun()
-        with c2:
-            has_photos = bool(st.session_state.attendance_images)
-            if st.button('Run face analysis', width="stretch", type="secondary", icon=":material/analytics:"):
-                with st.spinner("Deep scanning classroom photos..."):
-                    all_detected_ids = {}
-                    for idx, img in enumerate(st.session_state.attendance_images):
-                        img_np = np.array(img.convert("RGB"))
-                        
-                        detected, _, _ = predict_attendance(img_np)
-                        
-                        if detected:
-                            for sid in detected.keys():
-                                student_id = int(sid)
-                                
-                                all_detected_ids.setdefault(student_id, []).append(f"Photo {idx+1}")
-                    enrolled_res = supabase.table("subject_students").select("*, students(*)").eq("subject_id", selected_subject_id).execute()
-                    enrolled_students = enrolled_res.data
+                
+    has_photos = bool(st.session_state.attendance_images)    
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        if st.button('Clear all photos', width="stretch", type="tertiary", icon=":material/delete:", disabled=not has_photos):
+            st.session_state.attendance_images = []
+            st.rerun()
+    with c2:
+        if st.button('Run face analysis', width="stretch", type="secondary", icon=":material/analytics:", disabled=not has_photos):
+            with st.spinner("Deep scanning classroom photos..."):
+                all_detected_ids = {}
+                for idx, img in enumerate(st.session_state.attendance_images):
+                    img_np = np.array(img.convert("RGB"))
                     
-                    if not enrolled_students:
-                        st.warning("No students enrolled in this course")
-                    else:
-                        results, attendance_to_log, = [], []
-                        current_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                    detected, _, _ = predict_attendance(img_np)
+                    
+                    if detected:
+                        for sid in detected.keys():
+                            student_id = int(sid)
+                            
+                            all_detected_ids.setdefault(student_id, []).append(f"Photo {idx+1}")
+                enrolled_res = supabase.table("subject_students").select("*, students(*)").eq("subject_id", selected_subject_id).execute()
+                enrolled_students = enrolled_res.data
+                
+                if not enrolled_students:
+                    st.warning("No students enrolled in this course")
+                else:
+                    results = []
+                    attendance_to_log = []
+                    current_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                    
+                    for node in enrolled_students:
+                        student = node["students"]
+                        sources = all_detected_ids.get(int(student["student_id"]), []) 
+                        is_present = len(sources) > 0
                         
-                        for node in enrolled_students:
-                            student = node["students"]
-                            sources = all_detected_ids.get(int(student["student_id"]), []) 
-                            is_present = len(sources) > 0
-                            
-                            results.append({
-                                "Name": student["name"],
-                                "ID": student["student_id"],
-                                "Source": ", ".join(sources) if is_present else "-",
-                                "Status": "✅ Present" if is_present else "❌ Absent"
-                            })
-                            
-                            attendance_to_log.append({
-                                "student_id": student["student_id"],
-                                "subject_id": selected_subject_id,
-                                "timestamp": current_timestamp,
-                                "is_present": bool(is_present)
-                            })
-                            
+                        results.append({
+                            "Name": student["name"],
+                            "ID": student["student_id"],
+                            "Source": ", ".join(sources) if is_present else "-",
+                            "Status": "✅ Present" if is_present else "❌ Absent"
+                        })
+                        
+                        attendance_to_log.append({
+                            "student_id": student["student_id"],
+                            "subject_id": selected_subject_id,
+                            "timestamp": current_timestamp,
+                            "is_present": bool(is_present)
+                        })
+                        
                     attendance_result_dialog(pd.DataFrame(results), attendance_to_log) 
-                    
-        with c3:
-            if st.button("Use Voice Attendance", type="primary", width="stretch", icon=":material/mic:"):
-                voice_attendance_dialog()
+                
+    with c3:
+        if st.button("Use Voice Attendance", type="primary", width="stretch", icon=":material/mic:"):
+            voice_attendance_dialog(selected_subject_id)
     
 def teacher_tab_manage_subjects():
     teacher_id = st.session_state.teacher_data["teacher_id"]
@@ -192,6 +196,39 @@ def teacher_tab_manage_subjects():
 def attendance_records():
     st.header("Attendance records", anchor=False)
 
+    teacher_id = st.session_state.teacher_data["teacher_id"]
+    records = get_attendance_for_teacher(teacher_id)
+    
+    if not records:
+        return
+    
+    data = []
+    for r in records:
+        ts = r.get("timestamp")
+        data.append({
+            "Ts_group": ts.split(".")[0] if ts else None,
+            "Time": datetime.fromisoformat(ts).strftime("%Y-%m-%d %I:%M %p") if ts else "N'A",
+            "Subject": r["subjects"]["name"],
+            "Subject Code": r["subjects"]["subject_code"],
+            "is_present": bool(r.get("is_present", False))
+        })
+        
+    df = pd.DataFrame(data)
+    summary = (
+        df.groupby(["Ts_group", "Time", "Subject", "Subject Code"]).agg(
+            Present_Count = ("is_present", "sum"),
+            Total_Count = ("is_present", "count")
+        ).reset_index()
+    )
+    
+    summary["Attendance Stats"] = (
+        "✅ " + summary["Present_Count"].astype(str) + " /" + summary["Total_Count"].astype(str) + " Students"
+    )
+    
+    display_df = (summary.sort_values(by = "Ts_group", ascending=False)
+                  [["Time", "Subject", "Subject Code", "Attendance Stats"]]
+                  )
+    st.dataframe(display_df, width="stretch", hide_index=True)
 
 def login_teacher(username, password):
     if not username or not password:

@@ -1,4 +1,4 @@
-#utilities
+streamlit
 numpy
 pandas 
 #face recognition
@@ -14,9 +14,6 @@ bcrypt #hashing
 #qr code
 segno #url => qr 
 pillow # pre processing of image like import image in python
-
-#ui
-streamlit
 
 #voice recognition
 librosa
