@@ -11,8 +11,8 @@ import time
 from src.components.enroll_dialog import enroll_dialog
 from src.components.subject_card import subject_card
 def student_dashboard():
-    student_id = student_data["student_id"]
     student_data = st.session_state.student_data
+    student_id = student_data["student_id"]
     col1, col2 = st.columns(2, vertical_alignment="center", gap="xxlarge")
     with col1:
         header_dashboard()
@@ -20,7 +20,7 @@ def student_dashboard():
         st.subheader(f"""Welcome, {student_data["name"]}""")
         if st.button("Logout", type="secondary", key="loginbackbutton", shortcut="control + backspace"):
             st.session_state["is_logged_in"] = False
-            del st.session_state.student_data
+            st.session_state.pop("student_data", None)
             st.rerun()
         
         st.space()
@@ -32,7 +32,7 @@ def student_dashboard():
         if st.button("Enroll in Subject", type="primary", width="stretch"):
             enroll_dialog()
     
-    st.divider
+    st.divider()
     
     with st.spinner("Loading your enrolled subjects.."):
         subjects = get_student_subjects(student_id)
@@ -45,7 +45,7 @@ def student_dashboard():
             stats_map[sid] = {"total": 0, "attended": 0}
             
         stats_map[sid]["total"] += 1
-        if logs.get("is_present"):
+        if log.get("is_present"):
             stats_map[sid]["attended"] += 1
     
     cols = st.columns(2)
