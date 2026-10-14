@@ -3,10 +3,11 @@ numpy
 pandas 
 #face recognition
 scikit-learn
+#git+https://github.com/ageitgey/face_recognition_models #github repo for face embeddigs 
+setuptools==80.9.0 #becoz above package is not python package so we have to install setuptool
 dlib-bin # but it not compiled for python so instead of dlib we use dlib bin
-git+https://github.com/ageitgey/face_recognition_models #github repo for face embeddigs 
-setuptools #becoz above package is not python package so we have to install setuptool
-
+face-recognition==1.3.0
+face-recognition-models==0.3.0
 #database
 supabase
 bcrypt #hashing
